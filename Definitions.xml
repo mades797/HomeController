@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE Definitions [
+        <!ENTITY PYTHON_PATH "$HOME_CONTROLLER_DIR/HomeCommunication:$HOME_CONTROLLER_DIR/Logger:$HOME_CONTROLLER_DIR/HomeController:$HOME_CONTROLLER_DIR/Command">
+        <!ENTITY MEDIA_CONTROLLER_SERVER_ADDRESS "RPIMediaController1.avadakedavra.net">
+        <!ENTITY TEMPERATURE_CONTROLLER_SERVER_ADDRESS "RPITempController1.avadakedavra.net">
+        <!ENTITY LOCALHOST "127.0.0.1">
+        <!ENTITY LOG_LEVEL "3">
+        <!ENTITY LOCALHOST_IPADDR "MS-7A70.avadakedavra.net">
+        ]>
+<Definitions>
+    <EnvironmentVariables>
+        <Host Address="&LOCALHOST;">
+            <EnvironmentVariable Name="LOG_LEVEL">&LOG_LEVEL;</EnvironmentVariable>
+            <EnvironmentVariable Name="DEFINITIONS_FILE">$HOME_CONTROLLER_DIR/HomeController/Definitions.xml</EnvironmentVariable>
+            <EnvironmentVariable Name="LOCALHOST">&LOCALHOST;</EnvironmentVariable>
+            <EnvironmentVariable Name="PYTHONPATH">&PYTHON_PATH;</EnvironmentVariable>
+            <EnvironmentVariable Name="HOME_CONTROLLER_DIR">/home/maxime/PycharmProjects</EnvironmentVariable>
+        </Host>
+        <Host Address="&MEDIA_CONTROLLER_SERVER_ADDRESS;">
+            <EnvironmentVariable Name="LOG_LEVEL">&LOG_LEVEL;</EnvironmentVariable>
+            <EnvironmentVariable Name="PYTHONPATH">&PYTHON_PATH;</EnvironmentVariable>
+            <EnvironmentVariable Name="HOME_CONTROLLER_DIR">/home/pi</EnvironmentVariable>
+        </Host>
+        <Host Address="&TEMPERATURE_CONTROLLER_SERVER_ADDRESS;">
+            <EnvironmentVariable Name="LOG_LEVEL">&LOG_LEVEL;</EnvironmentVariable>
+            <EnvironmentVariable Name="PYTHONPATH">&PYTHON_PATH;</EnvironmentVariable>
+            <EnvironmentVariable Name="HOME_CONTROLLER_DIR">/home/pi</EnvironmentVariable>
+        </Host>
+    </EnvironmentVariables>
+    <AppDefinitions>
+        <!--AppDefinition AppName="TemperatureController"
+                       BaseDir="$HOME_CONTROLLER_DIR/TemperatureController">
+            <RequestDefinitions>
+                <RequestDefinition Name="get_temperature"
+                                   Type="query"
+                                   NumberOfArguments="0"
+                                   DataType="float" />
+                <RequestDefinition Name="get_monitoring_pin"
+                                   Type="query"
+                                   NumberOfArguments="0"
+                                   DataType="bool" />
+                <RequestDefinition Name="open_relay"
+                                   Type="command"
+                                   NumberOfArguments="0"
+                                   DataType="int" />
+                <RequestDefinition Name="close_relay"
+                                   Type="command"
+                                   NumberOfArguments="0"
+                                   DataType="int" />
+            </RequestDefinitions>
+            <HomeControllerProcess Name="TemperatureControllerServer"
+                                   Remote="True"
+                                   Address="&TEMPERATURE_CONTROLLER_SERVER_ADDRESS;"
+                                   BaseDir="$HOME_CONTROLLER_DIR/TemperatureController"
+                                   RunAsService="True"
+                                   EnvironmentFile="TemperatureControllerServer.env"
+                                   Command="sudo systemctl start TemperatureControllerServer.service">
+                <EnvironmentVariable Name="HOST_IPADDR">&TEMPERATURE_CONTROLLER_SERVER_ADDRESS;</EnvironmentVariable>
+                <EnvironmentVariable Name="LOG_FILE">/home/pi/log/TemperatureControllerServer.log</EnvironmentVariable>
+            </HomeControllerProcess>
+            <HomeControllerProcess Name="TemperatureControllerClient"
+                                   PythonModule="TemperatureControllerClient"
+                                   PythonClass="TemperatureControllerClient"
+                                   PythonClassMethod="run"
+                                   RunAfter="TemperatureControllerServer"
+                                   ServerIPAddress="&TEMPERATURE_CONTROLLER_SERVER_ADDRESS;">
+                <EnvironmentVariable Name="DJANGO_SETTINGS_MODULE">HomeManager.settings</EnvironmentVariable>
+                <EnvironmentVariable Name="LOG_FILE">/home/maxime/logs/TemperatureControllerClient.log</EnvironmentVariable>
+                <EnvironmentVariable Name="LOG_LEVEL">3</EnvironmentVariable>
+            </HomeControllerProcess>
+        </AppDefinition-->
+        <AppDefinition AppName="MediaController"
+                       BaseDir="$HOME_CONTROLLER_DIR/MediaController">
+            <RequestDefinitions>
+                <RequestDefinition Name="play"
+                                   Type="command"
+                                   NumberOfArguments="3"
+                                   DataType="int"
+                                   WaitForConfirmation="current_media_path"
+                                   ExpectedReturn="$media_name"
+                                   WaitForReturn="false"
+                                   DefaultArgumentValues="$offset:0,$volume:1"
+                                   CommandArguments="omxplayer,-b,$media_name,--pos,$offset,--vol,$volume"
+                                   Duplicatable="false"
+                                   ProcessName="omxplayer" />
+                <RequestDefinition Name="stop"
+                                   Type="command"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForReturn="false"
+                                   FailOnError="false"
+                                   DefaultValue="0"
+                                   CommandArguments="./dbuscontrol.sh,stop"/>
+                <RequestDefinition Name="play_pause"
+                                   Type="command"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForConfirmation="current_media_paused"
+                                   RetryWait="1"
+                                   MaxRetries="10"
+                                   CommandArguments="./dbuscontrol.sh,pause"
+                                   ExpectedReturn="^true|false$"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="set_position"
+                                   Type="command"
+                                   NumberOfArguments="1"
+                                   DataType="int"
+                                   WaitForReturn="true"
+                                   RetryWait="1"
+                                   MaxRetries="1"
+                                   CommandArguments="./dbuscontrol.sh,setposition,$position"
+                                   ReturnOutput="false"
+                                   TimeOut="10" />
+                <RequestDefinition Name="set_volume"
+                                   Type="command"
+                                   NumberOfArguments="1"
+                                   DataType="float"
+                                   WaitForReturn="true"
+                                   RetryWait="1"
+                                   MaxRetries="1"
+                                   ExpectedReturn="Volume: $volume_value"
+                                   CommandArguments="./dbuscontrol.sh,volume,$volume_value"
+                                   ReturnOutput="false"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="current_media_volume"
+                                   Type="query"
+                                   NumberOfArguments="0"
+                                   DataType="float"
+                                   WaitForReturn="true"
+                                   RetryWait="1"
+                                   MaxRetries="0"
+                                   ExpectedReturn="Volume: $"
+                                   CommandArguments="./dbuscontrol.sh,getvolume"
+                                   TimeOut="10"
+                                   FailOnError="false"
+                                   DefaultValue="0" />
+                <RequestDefinition Name="current_media_paused"
+                                   RequestType="query"
+                                   NumberOfArguments="0"
+                                   DataType="bool"
+                                   RetryWait="1"
+                                   MaxRetries="0"
+                                   CommandArguments="./dbuscontrol.sh,paused"
+                                   TimeOut="10"
+                                   ReturnMatchRegex="^true|false$"
+                                   ExpectedReturn="^true|false$"
+                                   FailOnError="false"
+                                   DefaultValue="false"/>
+                <RequestDefinition Name="current_media_position"
+                                   RequestType="query"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForReturn="true"
+                                   RetryWait="1"
+                                   MaxRetries="0"
+                                   CommandArguments="./dbuscontrol.sh,position"
+                                   FailOnError="false"
+                                   DefaultValue="0"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="current_media_path"
+                                   RequestType="query"
+                                   NumberOfArguments="0"
+                                   DataType="str"
+                                   WaitForReturn="true"
+                                   RetryWait="1"
+                                   MaxRetries="3"
+                                   CommandArguments="./dbuscontrol.sh,getsource"
+                                   FailOnError="false"
+                                   DefaultValue=""
+                                   TimeOut="10"/>
+                <RequestDefinition Name="current_media_duration"
+                                   RequestType="query"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForReturn="true"
+                                   RetryWait="1"
+                                   MaxRetries="0"
+                                   CommandArguments="./dbuscontrol.sh,duration"
+                                   FailOnError="false"
+                                   DefaultValue="0"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="toggle_subtitles"
+                                   RequestType="command"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForReturn="false"
+                                   RetryWait="1"
+                                   MaxRetries="10"
+                                   CommandArguments="./dbuscontrol.sh,togglesubtitles"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="volume_up"
+                                   RequestType="command"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForReturn="false"
+                                   RetryWait="1"
+                                   MaxRetries="10"
+                                   CommandArguments="./dbuscontrol.sh,volumeup"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="volume_down"
+                                   RequestType="command"
+                                   NumberOfArguments="0"
+                                   DataType="int"
+                                   WaitForReturn="false"
+                                   RetryWait="1"
+                                   MaxRetries="10"
+                                   CommandArguments="./dbuscontrol.sh,volumedown"
+                                   TimeOut="10"/>
+                <RequestDefinition Name="has_next"
+                                   RequestType="query"
+                                   NumberOfArguments="0"
+                                   DataType="bool"/>
+                <RequestDefinition Name="has_previous"
+                                   RequestType="query"
+                                   NumberOfArguments="0"
+                                   DataType="bool"/>
+            </RequestDefinitions>
+            <SharedMemoryDefinitions>
+                <SharedMemoryDefinition Name="current_media_paused" Type="bool" Size="1"/>
+                <SharedMemoryDefinition Name="current_media_position" Type="int" Size="32" Factor="0.000001"/>
+                <SharedMemoryDefinition Name="current_media_path" Type="str" Size="350"/>
+                <SharedMemoryDefinition Name="current_media_duration" Type="int" Size="32" Factor="0.000001"/>
+                <SharedMemoryDefinition Name="current_media_volume" Type="float" Size="32"/>
+            </SharedMemoryDefinitions>
+            <HomeControllerProcess Name="MediaControllerServer"
+                                   Remote="True"
+                                   Address="&MEDIA_CONTROLLER_SERVER_ADDRESS;"
+                                   BaseDir="$HOME_CONTROLLER_DIR/MediaController"
+                                   RunAsService="True"
+                                   EnvironmentFile="MediaControllerServer.env"
+                                   Command="sudo systemctl start MediaControllerServer.service">
+                <EnvironmentVariable Name="HOST_IPADDR">&MEDIA_CONTROLLER_SERVER_ADDRESS;</EnvironmentVariable>
+                <EnvironmentVariable Name="LOG_FILE">/hdd/media/log/mediacontrollerserver.log</EnvironmentVariable>
+            </HomeControllerProcess>
+            <HomeControllerProcess Name="MediaControllerClient"
+                                   PythonModule="MediaControllerClient"
+                                   PythonClass="MediaControllerClient"
+                                   PythonClassMethod="run"
+                                   RunAfter="MediaControllerServer"
+                                   ServerIPAddress="&MEDIA_CONTROLLER_SERVER_ADDRESS;">
+                <EnvironmentVariable Name="LOG_FILE">/hdd/media/log/mediacontrollerclient.log</EnvironmentVariable>
+                <EnvironmentVariable Name="DJANGO_SETTINGS_MODULE">HomeManager.settings</EnvironmentVariable>
+                <EnvironmentVariable Name="LOG_LEVEL">3</EnvironmentVariable>
+            </HomeControllerProcess>
+        </AppDefinition>
+        <AppDefinition AppName="TCPInterface">
+            <RequestDefinitions>
+                <RequestDefinition Name="process_statuses"
+                                   Type="query"
+                                   NumberOfArguments="0"
+                                   DataType="str" />
+            </RequestDefinitions>
+            <HomeControllerProcess Name="TCPInterfaceServer"
+                                   PythonModule="TCPInterface"
+                                   PythonClass="TCPInterfaceServer"
+                                   PythonClassMethod="run"
+                                   ServerIPAddress="&LOCALHOST;"
+                                   LocalServer="True">
+                <EnvironmentVariable Name="LOG_FILE">/home/maxime/logs/tcpinterface.log</EnvironmentVariable>
+            </HomeControllerProcess>
+        </AppDefinition>
+        <!--AppDefinition AppName="HomeManager"
+                       BaseDir="&HOMEMANAGER_BASE_DIR;">
+            <HomeControllerProcess Name="HomeManager"
+                                   Command="/home/maxime/PycharmProjects/venv/HomeManager/bin/python,manage.py,runserver,&LOCALHOST_IPADDR;:8674"
+                                   Pingable="False">
+                <EnvironmentVariable Name="LOG_FILE">/home/maxime/logs/homemanager.log</EnvironmentVariable>
+                <EnvironmentVariable Name="PYTHONPATH">&LOCALHOST_PYTHON_PATH;</EnvironmentVariable>
+            </HomeControllerProcess>
+        </AppDefinition-->
+    </AppDefinitions>
+</Definitions>
